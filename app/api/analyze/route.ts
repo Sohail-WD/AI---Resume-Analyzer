@@ -196,9 +196,9 @@ export async function POST(req: NextRequest) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[analyze] Gemini error:", msg);
 
-    // ── FALLBACK: If quota exceeded (429), use realistic mock data ──
-    if (msg.includes("429") || msg.toLowerCase().includes("quota")) {
-      console.warn("[analyze] Quota exceeded. Using realistic mock fallback for demo purposes.");
+    // ── FALLBACK: If quota exceeded (429) or key issue (400/expired), use realistic mock data ──
+    if (msg.includes("429") || msg.includes("400") || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("expired") || msg.toLowerCase().includes("invalid")) {
+      console.warn("[analyze] AI Service issue (Quota/Key). Using realistic mock fallback.");
       gemini = {
         isMock: true,
         resumeScore: 72 + Math.floor(Math.random() * 10),

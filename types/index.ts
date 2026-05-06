@@ -91,11 +91,26 @@ export interface AnalysisResult {
   isMock?: boolean;
 }
 
+export interface JobMatchResult {
+  matchScore: number;
+  matchedKeywords: string[];
+  missingKeywords: string[];
+  strengths: string[];
+  weaknesses: string[];
+  resumeEdits: string[];
+  optimizationTips: string[];
+  jdSummary: string;
+  isMock?: boolean;
+}
+
 export interface DashboardState {
   resumeData: ResumeData | null;
   githubUsername: string;
   targetRole: TargetRole | "";
   isAnalyzing: boolean;
   analysisResult: AnalysisResult | null;
+  jobMatchResult: JobMatchResult | null;
+  jobDescription: string;
+  isMatching: boolean;
   error: string | null;
 }

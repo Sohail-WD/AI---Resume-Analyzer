@@ -224,3 +224,56 @@
 .animate-float {
   animation: float 4s ease-in-out infinite;
 }
+
+/* ── Print Styles for PDF Report ── */
+@media print {
+  .no-print, nav, aside, button {
+    display: none !important;
+  }
+  
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  main {
+    margin: 0 !important;
+    padding: 20px !important;
+    width: 100% !important;
+  }
+
+  .glass {
+    background: #ffffff !important;
+    border: 1px solid #eeeeee !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    color: #000000 !important;
+  }
+
+  .text-white\/40, .text-white\/30, .text-white\/50, .text-white\/35 {
+    color: #555555 !important;
+  }
+
+  .text-white\/90, .text-white\/80 {
+    color: #000000 !important;
+  }
+
+  .bg-white\/5, .bg-white\/4 {
+    background: #f8f8f8 !important;
+  }
+
+  h2, h3, p, span, li {
+    color: #000000 !important;
+  }
+
+  /* Force chart visibility or simplify */
+  .recharts-surface {
+    filter: invert(1) hue-rotate(180deg) !important;
+  }
+
+  .print-page-break {
+    page-break-before: always;
+  }
+}

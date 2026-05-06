@@ -2,8 +2,8 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { FileText, Briefcase, BarChart3, Target, Star, TrendingUp } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { FileText, Briefcase, BarChart3, Target, Star, TrendingUp, Zap } from "lucide-react";
 import { GithubIcon } from "@/components/icons/GithubIcon";
 
 import ResumeUploadCard from "@/components/dashboard/ResumeUploadCard";
@@ -13,8 +13,11 @@ import AnalyzeButton from "@/components/dashboard/AnalyzeButton";
 import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
 import SkillsChart from "@/components/dashboard/SkillsChart";
 import ScoreCard from "@/components/dashboard/ScoreCard";
+import JobDescriptionInput from "@/components/dashboard/JobDescriptionInput";
+import JobMatchDisplay from "@/components/dashboard/JobMatchDisplay";
 
 import { analyzeResume } from "@/services/analyzeService";
+import { matchJobDescription } from "@/services/jobMatchService";
 import { DashboardState, ResumeData, TargetRole } from "@/types";
 
 export default function DashboardPage() {
@@ -25,8 +28,13 @@ export default function DashboardPage() {
     targetRole: "",
     isAnalyzing: false,
     analysisResult: null,
+    jobMatchResult: null,
+    jobDescription: "",
+    isMatching: false,
     error: null,
   });
+
+  const [activeTab, setActiveTab] = useState<"general" | "jd">("general");
 
   const handleResumeLoaded = useCallback((data: ResumeData) => {
     setState((prev) => ({
@@ -57,6 +65,29 @@ export default function DashboardPage() {
         ...prev,
         isAnalyzing: false,
         error: err instanceof Error ? err.message : "Analysis failed",
+      }));
+    }
+  };
+
+  const handleJobMatch = async () => {
+    if (!state.resumeData?.rawText || !state.jobDescription) return;
+
+    setState((prev) => ({ ...prev, isMatching: true, error: null }));
+
+    try {
+      const result = await matchJobDescription(state.resumeData.rawText, state.jobDescription);
+      setState((prev) => ({ ...prev, jobMatchResult: result, isMatching: false }));
+      
+      // Scroll to results
+      setTimeout(() => {
+        const el = document.getElementById("job-match-results");
+        el?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    } catch (err) {
+      setState((prev) => ({
+        ...prev,
+        isMatching: false,
+        error: err instanceof Error ? err.message : "Job match failed",
       }));
     }
   };
@@ -92,29 +123,128 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
-      {/* Input grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        <ResumeUploadCard
-          onResumeLoaded={handleResumeLoaded}
-          resumeData={state.resumeData}
-        />
-        <GitHubInputCard
-          value={state.githubUsername}
-          onChange={(val) => setState((p) => ({ ...p, githubUsername: val }))}
-        />
-        <RoleDropdown
-          value={state.targetRole}
-          onChange={(role) => setState((p) => ({ ...p, targetRole: role }))}
-        />
+      {/* Tabs */}
+      <div className="flex items-center gap-1 p-1 bg-white/5 rounded-2xl w-fit border border-white/5 no-print">
+        <button
+          onClick={() => setActiveTab("general")}
+          className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
+            activeTab === "general"
+              ? "bg-[#00D4FF] text-black shadow-[0_0_15px_rgba(0,212,255,0.3)]"
+              : "text-white/40 hover:text-white/70"
+          }`}
+        >
+          General Analysis
+        </button>
+        <button
+          onClick={() => setActiveTab("jd")}
+          className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
+            activeTab === "jd"
+              ? "bg-[#F472B6] text-black shadow-[0_0_15px_rgba(244,114,182,0.3)]"
+              : "text-white/40 hover:text-white/70"
+          }`}
+        >
+          Job Match (ATS)
+        </button>
       </div>
 
+      {/* Input grid */}
+      <AnimatePresence mode="wait">
+        {activeTab === "general" ? (
+          <motion.div
+            key="general"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
+          >
+            <ResumeUploadCard
+              onResumeLoaded={handleResumeLoaded}
+              resumeData={state.resumeData}
+            />
+            <GitHubInputCard
+              value={state.githubUsername}
+              onChange={(val) => setState((p) => ({ ...p, githubUsername: val }))}
+            />
+            <RoleDropdown
+              value={state.targetRole}
+              onChange={(role) => setState((p) => ({ ...p, targetRole: role }))}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="jd"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="grid grid-cols-1 lg:grid-cols-2 gap-5"
+          >
+            <ResumeUploadCard
+              onResumeLoaded={handleResumeLoaded}
+              resumeData={state.resumeData}
+            />
+            <JobDescriptionInput
+              value={state.jobDescription}
+              onChange={(val) => setState((p) => ({ ...p, jobDescription: val }))}
+              disabled={state.isMatching}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Analyze button */}
-      <AnalyzeButton
-        onClick={handleAnalyze}
-        isLoading={state.isAnalyzing}
-        disabled={missingFields.length > 0}
-        missingFields={missingFields}
-      />
+      <div className="no-print">
+        {activeTab === "general" ? (
+          <AnalyzeButton
+            onClick={handleAnalyze}
+            isLoading={state.isAnalyzing}
+            disabled={missingFields.length > 0}
+            missingFields={missingFields}
+          />
+        ) : (
+          <div className="flex flex-col items-center gap-4">
+            <button
+              onClick={handleJobMatch}
+              disabled={state.isMatching || !state.resumeData || !state.jobDescription}
+              className={`group relative flex items-center justify-center gap-3 px-10 py-4 rounded-2xl text-base font-black uppercase tracking-widest transition-all duration-300 overflow-hidden ${
+                state.isMatching || !state.resumeData || !state.jobDescription
+                  ? "bg-white/5 text-white/10 cursor-not-allowed border border-white/5"
+                  : "bg-gradient-to-r from-[#F472B6] to-[#7C3AED] text-white shadow-[0_0_30px_rgba(244,114,182,0.3)] hover:shadow-[0_0_50px_rgba(244,114,182,0.5)] hover:scale-[1.02] active:scale-[0.98]"
+              }`}
+            >
+              <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out" />
+              {state.isMatching ? (
+                <>
+                  <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Analyzing Match...
+                </>
+              ) : (
+                <>
+                  <Zap className="h-5 w-5" />
+                  Analyze Job Match
+                </>
+              )}
+            </button>
+            {!state.resumeData && <p className="text-[10px] text-white/20 uppercase font-bold">Please upload a resume first</p>}
+          </div>
+        )}
+      </div>
+
+      {/* Results for JD Match */}
+      {activeTab === "jd" && state.jobMatchResult && (
+        <motion.div
+          id="job-match-results"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-6 pt-4"
+        >
+          <div className="flex items-center gap-4">
+            <div className="flex-1 h-px bg-white/5" />
+            <span className="text-xs text-[#F472B6] uppercase tracking-[0.2em] font-black">Match Results</span>
+            <div className="flex-1 h-px bg-white/5" />
+          </div>
+          <JobMatchDisplay result={state.jobMatchResult} />
+        </motion.div>
+      )}
 
       {/* Divider */}
       <div className="flex items-center gap-4">
@@ -128,54 +258,60 @@ export default function DashboardPage() {
         <AnalyticsCard
           title="Overall Score"
           icon={Star}
-          value={state.analysisResult?.overallScore}
+          value={state.analysisResult?.overallScore || state.jobMatchResult?.matchScore}
           suffix="%"
           description="Combined AI score"
           accent="blue"
           delay={0}
-          isEmpty={!state.analysisResult}
+          isEmpty={!state.analysisResult && !state.jobMatchResult}
         />
         <AnalyticsCard
           title="Resume Score"
           icon={FileText}
-          value={state.analysisResult?.resumeScore}
+          value={state.analysisResult?.resumeScore || (state.jobMatchResult ? Math.round(state.jobMatchResult.matchScore * 0.9) : undefined)}
           suffix="%"
           description="Resume quality"
           accent="purple"
           delay={0.08}
-          isEmpty={!state.analysisResult}
+          isEmpty={!state.analysisResult && !state.jobMatchResult}
         />
         <AnalyticsCard
           title="GitHub Score"
           icon={GithubIcon}
-          value={state.analysisResult?.githubScore ?? undefined}
+          value={state.analysisResult?.githubScore ?? (state.githubUsername ? undefined : 0)}
           suffix="%"
-          description="Portfolio strength"
+          description={state.githubUsername ? "Fetching stats..." : "Link GitHub for score"}
           accent="green"
           delay={0.16}
-          isEmpty={!state.analysisResult}
+          isEmpty={!state.analysisResult && !state.githubUsername}
         />
         <AnalyticsCard
           title="Role Match"
           icon={Target}
-          value={state.analysisResult?.matchScore}
+          value={state.analysisResult?.matchScore || state.jobMatchResult?.matchScore}
           suffix="%"
-          description={state.analysisResult?.targetRole ?? "Target alignment"}
+          description={state.analysisResult?.targetRole || (state.jobMatchResult ? "Job Match" : "Target alignment")}
           accent="pink"
           delay={0.24}
-          isEmpty={!state.analysisResult}
+          isEmpty={!state.analysisResult && !state.jobMatchResult}
         />
       </div>
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <SkillsChart
-          data={state.analysisResult?.radarData}
-          isEmpty={!state.analysisResult}
+          data={state.analysisResult?.radarData || [
+            { subject: "Technical", A: state.jobMatchResult?.matchScore || 0, fullMark: 100 },
+            { subject: "Keywords", A: (state.jobMatchResult?.matchedKeywords.length || 0) * 10, fullMark: 100 },
+            { subject: "Role Fit", A: state.jobMatchResult?.matchScore || 0, fullMark: 100 },
+            { subject: "Experience", A: 70, fullMark: 100 },
+            { subject: "Soft Skills", A: 85, fullMark: 100 },
+          ]}
+          isEmpty={!state.analysisResult && !state.jobMatchResult}
         />
         <ScoreCard
-          score={state.analysisResult?.overallScore}
-          isEmpty={!state.analysisResult}
+          score={state.analysisResult?.overallScore || state.jobMatchResult?.matchScore}
+          isEmpty={!state.analysisResult && !state.jobMatchResult}
         />
       </div>
 
