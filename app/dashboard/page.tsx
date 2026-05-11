@@ -54,6 +54,10 @@ export default function DashboardPage() {
         resumeText: state.resumeData.rawText,
         githubUsername: state.githubUsername,
         targetRole: state.targetRole as TargetRole,
+        resumeData: {
+          fileName: state.resumeData.fileName,
+          fileSize: state.resumeData.fileSize,
+        },
       });
 
       // Store in sessionStorage to pass to results page

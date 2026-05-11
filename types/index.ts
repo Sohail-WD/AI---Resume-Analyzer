@@ -60,6 +60,10 @@ export interface AnalysisInput {
   resumeText: string;
   githubUsername: string;
   targetRole: TargetRole;
+  resumeData?: {
+    fileName: string;
+    fileSize: number;
+  };
 }
 
 export interface AnalysisResult {
@@ -113,4 +117,10 @@ export interface DashboardState {
   jobDescription: string;
   isMatching: boolean;
   error: string | null;
+}
+
+export interface StoredAnalysis extends AnalysisResult {
+  userId: string;
+  resumeFileName?: string;
+  resumeFileSize?: number;
 }

@@ -2,6 +2,7 @@
 
 import { Menu, Bell, Search, Sparkles } from "lucide-react";
 import NeonBadge from "@/components/common/NeonBadge";
+import AuthButton from "@/components/auth/AuthButton";
 import { usePathname } from "next/navigation";
 
 const PAGE_TITLES: Record<string, string> = {
@@ -65,9 +66,7 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
         </button>
 
         <div className="flex items-center gap-2 pl-2 border-l border-white/10">
-          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#00D4FF] flex items-center justify-center">
-            <Sparkles className="h-3.5 w-3.5 text-white" />
-          </div>
+          <AuthButton />
         </div>
       </div>
     </header>

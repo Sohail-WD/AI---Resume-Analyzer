@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSession } from "next-auth/react";
+import Image from "next/image";
 import {
   LayoutDashboard,
   BarChart3,
@@ -11,9 +13,12 @@ import {
   Zap,
   X,
   ChevronRight,
+  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import NeonBadge from "@/components/common/NeonBadge";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -29,6 +34,8 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const router = useRouter();
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
@@ -101,18 +108,44 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         })}
       </nav>
 
-      {/* Footer */}
+      {/* Footer / Plan Info */}
       <div className="p-4 border-t border-white/5">
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-white/3 border border-white/5">
-          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#00D4FF] flex items-center justify-center text-xs font-bold text-white shrink-0">
-            U
-          </div>
+        <button 
+          onClick={() => {
+            router.push("/dashboard/pricing");
+            if (onClose) onClose();
+          }}
+          className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/5 hover:bg-white/5 hover:border-white/10 transition-all text-left group"
+        >
+          {session?.user?.image ? (
+            <Image
+              src={session.user.image}
+              alt={session.user.name || "User"}
+              width={32}
+              height={32}
+              className="rounded-full border border-white/10"
+            />
+          ) : (
+            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#00D4FF] flex items-center justify-center text-xs font-bold text-white shrink-0">
+              {session?.user?.name?.[0] || "U"}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-white/80 truncate">User</p>
-            <NeonBadge label="Free Plan" variant="muted" size="sm" />
+            <p className="text-xs font-semibold text-white/80 truncate">
+              {session?.user?.name || "Guest User"}
+            </p>
+            <div className="flex items-center gap-2">
+              <NeonBadge 
+                label={session ? "Basic Plan" : "Sign In Required"} 
+                variant={session ? "muted" : "pink"} 
+                size="sm" 
+              />
+              <TrendingUp className="h-3 w-3 text-[#00D4FF] opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
           </div>
-        </div>
+        </button>
       </div>
+
     </div>
   );
 

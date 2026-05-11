@@ -8,6 +8,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { AnalysisInput, AnalysisResult, SkillScore, GitHubProfile } from "@/types";
 import { analyzeWithGemini, buildAnalysisPrompt } from "@/lib/gemini";
 import { fetchGitHubProfile } from "@/lib/github";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import clientPromise from "@/lib/mongodb";
 
 export const runtime = "nodejs";
 
@@ -294,6 +297,25 @@ export async function POST(req: NextRequest) {
     sectionScores: generateSectionScores(gemini.resumeScore, gemini.atsScore),
     isMock: !!gemini.isMock,
   };
+
+  // ── Step 6: Save to MongoDB if authenticated ──────────────────────────────
+  try {
+    const session = await getServerSession(authOptions as any);
+    if (session?.user) {
+      const client = await clientPromise;
+      const db = client.db();
+      await db.collection("analyses").insertOne({
+        ...result,
+        userId: (session.user as any).id,
+        resumeFileName: body.resumeData?.fileName,
+        resumeFileSize: body.resumeData?.fileSize,
+      });
+      console.log(`[analyze] Analysis saved for user: ${session.user.email}`);
+    }
+  } catch (dbErr) {
+    console.error("[analyze] Failed to save analysis to DB:", dbErr);
+    // Continue anyway - we don't want to fail the request if DB is down
+  }
 
   const elapsed = Date.now() - startTime;
   console.log(`[analyze] Complete in ${elapsed}ms — overall score: ${overallScore}`);
